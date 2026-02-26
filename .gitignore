@@ -2,7 +2,10 @@
 build/
 .idea/
 *.class
-*.jar
 *.log
 .DS_Store
+
+# But allow gradle-wrapper.jar which is needed for CI/CD
+!gradle/wrapper/gradle-wrapper.jar
+!gradle-wrapper.jar
 
