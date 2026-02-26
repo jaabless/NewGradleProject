@@ -1,0 +1,108 @@
+name: Deploy Test Results to GitHub Pages
+
+on:
+  push:
+    branches: [ main ]
+  workflow_run:
+    workflows: [ "CI" ]
+    types: [ completed ]
+    branches: [ main ]
+
+permissions:
+  contents: read
+  checks: write
+  pull-requests: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up JDK 21
+      uses: actions/setup-java@v4
+      with:
+        java-version: '21'
+        distribution: 'temurin'
+        cache: gradle
+
+    - name: Grant execute permission for gradlew
+      run: chmod +x gradlew
+
+    - name: Build with Gradle and generate test reports
+      run: ./gradlew build jacocoTestReport
+      continue-on-error: true
+
+    - name: Prepare test results for GitHub Pages
+      run: |
+        mkdir -p public
+        cp -r build/reports/tests/test/* public/ 2>/dev/null || true
+        cp -r build/reports/jacoco/test/html/* public/coverage/ 2>/dev/null || mkdir -p public/coverage
+        echo "Test reports generated at build/reports/tests/test/"
+        echo "Coverage reports generated at build/reports/jacoco/test/"
+
+    - name: Create index page
+      run: |
+        cat > public/index.html << 'EOF'
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <title>Test Results & Coverage Reports</title>
+          <style>
+            body { font-family: Arial, sans-serif; margin: 40px; }
+            h1 { color: #333; }
+            .report-link { 
+              display: inline-block; 
+              margin: 10px 20px 10px 0; 
+              padding: 10px 20px; 
+              background: #007bff; 
+              color: white; 
+              text-decoration: none; 
+              border-radius: 5px;
+            }
+            .report-link:hover { background: #0056b3; }
+            .timestamp { color: #666; font-size: 0.9em; }
+          </style>
+        </head>
+        <body>
+          <h1>Test Results & Coverage Reports</h1>
+          <p class="timestamp">Last updated: <span id="date"></span></p>
+          
+          <h2>Available Reports</h2>
+          <div>
+            <a href="./coverage/" class="report-link">📊 Code Coverage Report</a>
+            <a href="./index.html" class="report-link">✅ Test Results Report</a>
+          </div>
+          
+          <hr>
+          <p>These reports are automatically generated and deployed on each push to the main branch.</p>
+          
+          <script>
+            document.getElementById('date').textContent = new Date().toLocaleString();
+          </script>
+        </body>
+        </html>
+        EOF
+
+    - name: Setup Pages
+      uses: actions/configure-pages@v4
+
+    - name: Upload artifact
+      uses: actions/upload-pages-artifact@v3
+      with:
+        path: 'public'
+
+    - name: Deploy to GitHub Pages
+      id: deployment
+      uses: actions/deploy-pages@v4
+
