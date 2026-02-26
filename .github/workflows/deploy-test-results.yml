@@ -41,7 +41,6 @@ jobs:
 
     - name: Build with Gradle and generate test reports
       run: ./gradlew build jacocoTestReport
-      continue-on-error: true
 
     - name: Prepare test results for GitHub Pages
       run: |
