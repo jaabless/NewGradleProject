@@ -1,6 +1,7 @@
 plugins {
     id 'org.jetbrains.kotlin.jvm' version '1.9.22'
     id 'application'
+    id 'jacoco'
 }
 
 group = 'com.example'
@@ -26,5 +27,19 @@ application {
 
 tasks.named('test') {
     useJUnit()
+    finalizedBy jacocoTestReport
+}
+
+jacoco {
+    toolVersion = "0.8.10"
+}
+
+jacocoTestReport {
+    dependsOn test
+    reports {
+        xml.required = true
+        html.required = true
+        csv.required = false
+    }
 }
 
